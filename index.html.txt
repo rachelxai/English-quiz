@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>英语配对小测 - 生成 & 在线练习</title>
+  <meta name="description" content="小学英语中英配对练习工具，支持生成打印试卷和在线匹配练习"/>
+  <style>
+    :root {
+      --primary: #4A90E2;     /* 主蓝 */
+      --accent: #50C878;      /* 薄荷绿 */
+      --success: #50C878;
+      --error: #E67E22;
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --text: #2D3748;
+      --light: #EDF2F7;
+      --border: #CBD5E0;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--primary);
+    }
+    h1 { font-size: 2.2rem; margin-bottom: 8px; }
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+    .tab-btn {
+      padding: 10px 24px;
+      border: none;
+      background: var(--light);
+      color: var(--text);
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--card);
+      border-bottom: 3px solid var(--primary);
+      color: var(--primary);
+    }
+    .section { display: none; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); }
+    .section.active { display: block; }
+    .input-area {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+    .input-box {
+      flex: 1;
+      min-width: 300px;
+    }
+    .input-box label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    textarea {
+      width: 100%;
+      height: 320px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      resize: vertical;
+      font-family: inherit;
+    }
+    textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,144,226,0.15); }
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #357ABD; }
+    .btn-secondary { background: var(--accent); color: white; }
+    .btn-secondary:hover { background: #3EAA5E; }
+    .info { font-size: 0.9rem; color: #718096; margin: 10px 0; }
+    #printArea, #quizArea { margin-top: 20px; }
+    .question-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 1.05rem;
+    }
+    .question-table th, .question-table td {
+      border: 1px solid #CBD5E0;
+      padding: 12px;
+      text-align: left;
+    }
+    .question-table th { background: var(--light); color: var(--primary); }
+    .match-left { width: 45%; }
+    .match-right { width: 45%; text-align: right; }
+    .score-board {
+      font-size: 1.3rem;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin: 12px 0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.08); }
+    .card.selected { border-color: var(--primary); background: rgba(74,144,226,0.08); }
+    .card.correct { background: rgba(80,200,120,0.15); border-color: var(--success); }
+    .card.wrong { background: rgba(230,126,34,0.15); border-color: var(--error); }
+    .timer { font-size: 1.4rem; font-weight: bold; color: var(--primary); text-align: center; margin: 15px 0; }
+
+    @media print {
+      body { background: white; }
+      .no-print { display: none !important; }
+      .section { box-shadow: none; border: none; padding: 0; }
+      header, .tabs, .input-area, .controls { display: none; }
+      #printArea { display: block !important; }
+      .question-table th { background: #f0f0f0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>英语配对小测</h1>
+    <p>小学中英配对练习工具 - 生成打印 + 在线练习</p>
+  </header>
+
+  <div class="tabs no-print">
+    <button class="tab-btn active" data-tab="generate">生成试卷</button>
+    <button class="tab-btn" data-tab="quiz">在线练习</button>
+  </div>
+
+  <div id="generate" class="section active">
+    <div class="input-area">
+      <div class="input-box">
+        <label for="english">左侧英文（每行一个）</label>
+        <textarea id="english" placeholder="apple&#10;book&#10;cat&#10;..."></textarea>
+      </div>
+      <div class="input-box">
+        <label for="chinese">右侧中文（对应顺序）</label>
+        <textarea id="chinese" placeholder="苹果&#10;书&#10;猫&#10;..."></textarea>
+      </div>
+    </div>
+
+    <div class="controls no-print">
+      <button class="btn-primary" onclick="generateQuiz()">生成试卷</button>
+      <button class="btn-secondary" onclick="startQuizFromGenerate()">直接开始在线练习</button>
+      <button class="btn-primary no-print" onclick="window.print()">打印当前试卷</button>
+    </div>
+
+    <div id="printArea" style="display:none;">
+      <div class="info" id="genTime"></div>
+      <h2 style="text-align:center; color:var(--primary);">英语配对练习题</h2>
+      <p style="text-align:center;">姓名：____________________　　日期：____________________　　得分：______</p>
+      <table class="question-table">
+        <thead>
+          <tr>
+            <th>序号</th>
+            <th class="match-left">英文</th>
+            <th>序号</th>
+            <th class="match-right">中文</th>
+          </tr>
+        </thead>
+        <tbody id="printBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="quiz" class="section">
+    <div class="timer no-print" id="timer">00:00</div>
+    <div class="score-board no-print">
+      得分：<span id="score">0</span> / <span id="total">0</span>　　正确率：<span id="accuracy">0</span>%
+    </div>
+
+    <div id="quizArea"></div>
+
+    <div class="controls no-print" style="text-align:center; margin-top:30px;">
+      <button class="btn-primary" onclick="resetQuiz()">重新开始</button>
+      <button class="btn-secondary" onclick="switchToGenerate()">返回生成试卷</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pairs = [];
+  let shuffledChinese = [];
+  let currentTab = 'generate';
+  let timerInterval;
+  let seconds = 0;
+  let score = 0;
+  let answered = 0;
+
+  // 切换 tab
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      currentTab = btn.dataset.tab;
+    });
+  });
+
+  function generateQuiz() {
+    const eng = document.getElementById('english').value.trim();
+    const chi = document.getElementById('chinese').value.trim();
+    if (!eng || !chi) { alert('请填写英文和中文内容'); return; }
+
+    const engLines = eng.split('\n').map(l => l.trim()).filter(l => l);
+    const chiLines = chi.split('\n').map(l => l.trim()).filter(l => l);
+
+    if (engLines.length !== chiLines.length || engLines.length === 0) {
+      alert('英文和中文行数必须相同且不为空');
+      return;
+    }
+
+    pairs = engLines.map((e, i) => ({ eng: e, chi: chiLines[i] }));
+
+    // 打乱中文
+    shuffledChinese = [...chiLines].sort(() => Math.random() - 0.5);
+
+    // 显示生成时间
+    const now = new Date();
+    const timeStr = now.toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    document.getElementById('genTime').innerHTML = `生成时间：${timeStr}　　（共 ${pairs.length} 题）`;
+
+    // 打印区
+    const tbody = document.getElementById('printBody');
+    tbody.innerHTML = '';
+    for (let i = 0; i < pairs.length; i++) {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${i+1}</td>
+        <td class="match-left">${pairs[i].eng}</td>
+        <td>${i+1}</td>
+        <td class="match-right">${shuffledChinese[i]}</td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    document.getElementById('printArea').style.display = 'block';
+    alert('试卷已生成！可直接打印或切换到“在线练习”模式');
+  }
+
+  function startQuizFromGenerate() {
+    if (pairs.length === 0) {
+      alert('请先生成试卷或确保有配对数据');
+      return;
+    }
+    switchTab('quiz');
+    initQuiz();
+  }
+
+  function initQuiz() {
+    score = 0; answered = 0;
+    document.getElementById('score').textContent = '0';
+    document.getElementById('total').textContent = pairs.length;
+    document.getElementById('accuracy').textContent = '0';
+
+    seconds = 0;
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      seconds++;
+      const min = String(Math.floor(seconds/60)).padStart(2,'0');
+      const sec = String(seconds%60).padStart(2,'0');
+      document.getElementById('timer').textContent = `${min}:${sec}`;
+    }, 1000);
+
+    const area = document.getElementById('quizArea');
+    area.innerHTML = '<p style="text-align:center; margin:20px 0; color:#718096;">点击左侧英文，再点击右侧中文进行匹配</p>';
+
+    const leftDiv = document.createElement('div');
+    leftDiv.style.display = 'flex'; leftDiv.style.flexWrap = 'wrap'; leftDiv.style.gap = '12px'; leftDiv.style.justifyContent = 'center';
+    pairs.forEach((p, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.index = i;
+      card.textContent = p.eng;
+      card.onclick = () => selectLeft(card);
+      leftDiv.appendChild(card);
+    });
+
+    const rightDiv = document.createElement('div');
+    rightDiv.style.display = 'flex'; rightDiv.style.flexWrap = 'wrap'; rightDiv.style.gap = '12px'; rightDiv.style.justifyContent = 'center'; rightDiv.style.marginTop = '30px';
+    shuffledChinese.forEach((c, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.chi = c;
+      card.textContent = c;
+      card.onclick = () => selectRight(card);
+      rightDiv.appendChild(card);
+    });
+
+    area.appendChild(leftDiv);
+    area.appendChild(rightDiv);
+  }
+
+  let selectedLeft = null;
+  function selectLeft(card) {
+    if (selectedLeft) selectedLeft.classList.remove('selected');
+    selectedLeft = card;
+    card.classList.add('selected');
+  }
+
+  function selectRight(card) {
+    if (!selectedLeft) return;
+    const idx = selectedLeft.dataset.index;
+    const correctChi = pairs[idx].chi;
+
+    answered++;
+    if (card.dataset.chi === correctChi) {
+      card.classList.add('correct');
+      selectedLeft.classList.add('correct');
+      score++;
+    } else {
+      card.classList.add('wrong');
+      selectedLeft.classList.add('wrong');
+    }
+
+    selectedLeft = null;
+    document.getElementById('score').textContent = score;
+    document.getElementById('accuracy').textContent = Math.round((score / answered) * 100) || 0;
+
+    // 全部答完
+    if (answered === pairs.length) {
+      clearInterval(timerInterval);
+      alert(`练习完成！得分：${score}/${pairs.length}，用时 ${document.getElementById('timer').textContent}`);
+    }
+  }
+
+  function resetQuiz() {
+    initQuiz();
+  }
+
+  function switchToGenerate() {
+    switchTab('generate');
+    clearInterval(timerInterval);
+    document.getElementById('timer').textContent = '00:00';
+  }
+
+  function switchTab(tab) {
+    document.querySelector(`.tab-btn[data-tab="${tab}"]`).click();
+  }
+</script>
+</body>
+</html>
